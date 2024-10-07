@@ -1,8 +1,11 @@
 library(gpx)
 library(terra)
 library(tidyverse)
+library(tidyterra)
 library(geosphere)
 library(lubridate)
+library(geodata)
+library(RColorBrewer)
 
 # Create a list of .gpx file path names
 gpx_files <- list.files("C:/Users/terre/Documents/BikeAcrossCanada", pattern = "*.gpx", full.names = TRUE)
@@ -67,7 +70,7 @@ sum(summarized_tracks$total_time_hr)/24 #32.16 days biking
 track_layers <- list()
 
 # Loop through each GPX file and read only the 'tracks' layer
-for (file in sorted_gpx_files) {
+for (file in gpx_files) {
   gpx_layer <- vect(file, layer = "tracks")  # Read only the 'tracks' layer
   track_layers[[file]] <- gpx_layer
 }
@@ -75,13 +78,37 @@ for (file in sorted_gpx_files) {
 # Combine all track layers into a single vector
 combined_tracks <- do.call(c, track_layers)
 
-# Plot the combined track layers
 plot(combined_tracks$`C:/Users/terre/Documents/BikeAcrossCanada/Day_1_Vancouver_to_Chilliwack_BC_Morning_ride_.gpx`)
 
 
+
+setwd('./basemap')
+
+ca_bound <- gadm(country = 'CA', level = 1, resolution = 1,
+                 path = '../base_maps')
+us_bound <- gadm(country = 'US', level = 0, resolution = 1,
+                 path = '../base_maps')
+
+ca_us_bound <- rbind(ca_bound, us_bound)
+
+great_lakes <- vect('C:/Users/terre/Documents/Acadia/Malus Project/maps/great lakes/combined great lakes/')
+
+
+
+# Plot Canada and USD
+plot(ca_bound, xlim = c(-150, -48), ylim = c(40, 60), col = 'snow2', background = 'lightblue2')
+plot(us_bound, xlim = c(-150, -48), ylim = c(40, 60), col = 'snow3', background = 'lightblue2', add = T)
+# Plot great lakes
+plot(great_lakes, add = T, col = 'lightblue2')
+
+# Plot the combined track layers
 # Loop through the rest of the layers and add them to the plot
 
-
 for (i in 1:length(track_layers)) {
-  plot(track_layers[[i]], col = rainbow(length(track_layers))[i], add = TRUE)
+  plot(track_layers[[i]], col = 'red', add = TRUE, lwd = 3)
 }
+
+
+
+
+
