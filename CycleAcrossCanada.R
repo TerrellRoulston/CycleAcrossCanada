@@ -18,6 +18,7 @@ library(ggplot2) # plotting
 library(gganimate) # plot animations
 library(XML) # parse XLM/HTML data
 library(geosphere) # compute distances and related measures for angular (longitude/latitude) locations.
+library(geodata) # map of Canada
 
 # Read all GPX files in data folder d
 gpx_files <- list.files("C:/Users/terre/Documents/BikeAcrossCanada", pattern = "*.gpx", full.names = TRUE)
@@ -63,6 +64,19 @@ complete_df <-
   mutate(dist_to_lead_m = distm(c(lon, lat), c(lon_lead, lat_lead), fun = distHaversine)[1,1]) %>%
   ungroup()
 
+# compute time elapsed (in seconds) between subsequent GPS points
+complete_df <- 
+  complete_df %>%
+  mutate(ts_POSIXct_lead = lead(ts_POSIXct)) %>%
+  mutate(ts_diff_s = as.numeric(difftime(ts_POSIXct_lead, ts_POSIXct, units = "secs"))) 
+
+# compute metres per seconds, kilometres per hour 
+complete_df <- 
+  complete_df %>%
+  mutate(speed_m_per_sec = dist_to_lead_m / ts_diff_s) %>%
+  mutate(speed_km_per_h = speed_m_per_sec * 3.6) %>% 
+  filter(!speed_km_per_h > 110)
+
 
 # plot elevation
 plt_elev <- 
@@ -79,3 +93,21 @@ plt_speed_km_per_h <-
   labs(x = "Time", y = "Speed [km/h]") + 
   theme_grey(base_size = 14)
 plt_speed_km_per_h
+
+# load basemap
+setwd('./basemap')
+
+ca_bound <- gadm(country = 'CA', level = 0, resolution = 1,
+                 path = '../base_maps')
+
+# Plot path
+plot(ca_bound)
+terra::plot(x = complete_df$lon, y = complete_df$lat, 
+     type = "l", col = "blue", lwd = 3, 
+     xlab = "Longitude", ylab = "Latitude")
+
+
+
+
+
+
