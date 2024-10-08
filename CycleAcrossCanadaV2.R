@@ -1,3 +1,6 @@
+# Top ---------------------------------------------------------------------
+# 
+
 library(gpx)
 library(terra)
 library(tidyverse)
@@ -6,6 +9,8 @@ library(geosphere)
 library(lubridate)
 library(geodata)
 library(RColorBrewer)
+library(gganimate)
+library(gifski)
 
 # Create a list of .gpx file path names
 gpx_files <- list.files("C:/Users/terre/Documents/BikeAcrossCanada", pattern = "*.gpx", full.names = TRUE)
@@ -109,6 +114,32 @@ for (i in 1:length(track_layers)) {
 }
 
 
+# Animated plot -----------------------------------------------------------
 
+# Convert the combined tracks data to a dataframe for ggplot2
+track_df <- map_dfr(1:length(track_layers), function(i) {
+  data.frame(geom(track_layers[[i]])) %>% 
+    mutate(day = i)  # Add a column for day (i.e., GPX file number)
+})
+
+# Create a base plot with ggplot2
+animated_plot <- ggplot() +
+  geom_spatvector(data = ca_bound, fill = 'snow2', color = 'black') +  # Canada boundaries
+  geom_spatvector(data = us_bound, fill = 'snow3', color = 'black') +   # US boundaries
+  geom_spatvector(data = great_lakes, fill = 'lightblue2', color = NA) +  # Great Lakes
+  geom_path(data = track_df, aes(x = x, y = y, group = interaction(geom, part), color = 'red'), size = 1.5) + 
+  #scale_color_viridis_d() +  # Use a color scale for the days
+  coord_sf(xlim = c(-150, -48), ylim = c(40, 60)) +  # Set the limits for the map
+  theme_minimal() +
+  labs(title = 'Bike Trip Across Canada: Day {day}', x = NULL, y = NULL) +
+  theme(legend.position = "none")
+
+# Add animation using gganimate
+animated_bike_trip <- animated_plot +
+  transition_states(day, transition_length = 2, state_length = 1) +  # Transition across days
+  ease_aes('linear')  # Use a linear easing function for smooth transitions
+
+setwd('../plots/')
+animate(animated_bike_trip, fps = 10, width = 800, height = 600, renderer = gifski_renderer("bike_trip_across_canada.gif"))
 
 
